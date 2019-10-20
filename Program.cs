@@ -54,11 +54,14 @@ namespace FitParse
 		private static void ProcessFile(string fileName)
 		{
 			mesgCounts.Clear();
+			activities.Clear();
+			sessions.Clear();
+			laps.Clear();
+			records.Clear();
 
 			Stopwatch stopwatch = new Stopwatch();
 			stopwatch.Start();
 			Database db = new Database();
-			db.Connect();
 
 			Console.WriteLine("FIT Decode Example Application");
 
@@ -147,8 +150,6 @@ namespace FitParse
 			{
 				Console.WriteLine("Exception occurred when trying to decode the FIT file. Message: " + ex.Message);
 			}
-
-			db.Close();
 		}
 
 		private static void OnDeveloperFieldDescriptionEvent(object sender, DeveloperFieldDescriptionEventArgs args)

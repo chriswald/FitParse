@@ -9,25 +9,31 @@ namespace FitParse
 {
 	class Database
 	{
-		private SqlConnection conn;
+		private string host;
+		private string port;
+		private string database;
+		private string username;
+		private string password;
 
-		public void Connect()
+		public Database()
 		{
-			string host = ConfigurationManager.AppSettings["Hostname"];
-			string port = ConfigurationManager.AppSettings["Port"];
-			string database = ConfigurationManager.AppSettings["Database"];
-			string username = ConfigurationManager.AppSettings["Username"];
-			string password = ConfigurationManager.AppSettings["Password"];
+			host = ConfigurationManager.AppSettings["Hostname"];
+			port = ConfigurationManager.AppSettings["Port"];
+			database = ConfigurationManager.AppSettings["Database"];
+			username = ConfigurationManager.AppSettings["Username"];
+			password = ConfigurationManager.AppSettings["Password"];
+		}
 
-			conn = new SqlConnection(
+		public SqlConnection CreateConn()
+		{
+			return new SqlConnection(
 				$"Server=tcp:{host},{port};Database={database};Uid={username};Pwd={password}");
-
-			conn.Open();
 		}
 
 		public void Query()
 		{
 			string query = "SELECT * FROM SPORT";
+			using (SqlConnection conn = this.CreateConn())
 			using (SqlCommand cmd = new SqlCommand(query, conn))
 			{
 				DataTable table = new DataTable("Sport");
@@ -51,11 +57,11 @@ namespace FitParse
 			foreach (ActivityMesg activity in activities)
 			{
 				int activityEnd = Convert.ToInt32(activity.GetFieldValue(ActivityMesg.FieldDefNum.Timestamp));
-				int activityDuration = Convert.ToInt32(activity.GetFieldValue(ActivityMesg.FieldDefNum.TotalTimerTime));
+				int activityDuration = Convert.ToInt32(activity.GetTotalTimerTime() ?? 0);
 				int activityStart = activityEnd - activityDuration;
 
 				// Check if the activity already exists. Don't upload it if it does.
-				if (this.ActivityExists(activityEnd, activityDuration))
+				if (this.ActivityExists(activity))
 				{
 					Console.WriteLine("Activity already exists");
 					continue;
@@ -157,6 +163,7 @@ namespace FitParse
 				"select * from #temp;" +
 				"drop table if exists #temp;";
 
+			using (SqlConnection conn = this.CreateConn())
 			using (SqlCommand cmd = new SqlCommand(query, conn))
 			{
 				cmd.Parameters.AddWithValue("@Timestamp", Int64N(mesg, ActivityMesg.FieldDefNum.Timestamp));
@@ -232,6 +239,7 @@ namespace FitParse
 				"select * from #temp;" +
 				"drop table if exists #temp;";
 
+			using (SqlConnection conn = this.CreateConn())
 			using (SqlCommand cmd = new SqlCommand(query, conn))
 			{
 				cmd.Parameters.AddWithValue("@ActivityID", activityId);
@@ -341,6 +349,7 @@ namespace FitParse
 				"select * from #temp;" +
 				"drop table if exists #temp;";
 
+			using (SqlConnection conn = this.CreateConn())
 			using (SqlCommand cmd = new SqlCommand(query, conn))
 			{
 				cmd.Parameters.AddWithValue("@SessionID", sessionId);
@@ -426,6 +435,7 @@ namespace FitParse
 				"select * from #temp;" +
 				"drop table if exists #temp;";
 
+			using (SqlConnection conn = this.CreateConn())
 			using (SqlCommand cmd = new SqlCommand(query, conn))
 			{
 				cmd.Parameters.AddWithValue("@LapID", lapId);
@@ -464,12 +474,16 @@ namespace FitParse
 			}
 		}
 
-		private bool ActivityExists(int timestamp, int totalTimerTime)
+		private bool ActivityExists(ActivityMesg activity)
 		{
+			int timestamp = Int32F(activity, ActivityMesg.FieldDefNum.Timestamp) ?? 0;
+			int totalTimerTime = Int32F(activity, ActivityMesg.FieldDefNum.TotalTimerTime) ?? 0;
+
 			string query =
 				"select count(ID) from Activity " +
 				"where Timestamp = @Timestamp and TotalTimerTime = @TotalTimerTime";
 
+			using (SqlConnection conn = this.CreateConn())
 			using (SqlCommand cmd = new SqlCommand(query, conn))
 			{
 				cmd.Parameters.AddWithValue("@Timestamp", Convert.ToInt64(timestamp));
@@ -490,11 +504,6 @@ namespace FitParse
 
 				return false;
 			}
-		}
-
-		public void Close()
-		{
-			conn.Close();
 		}
 
 		private Int32? Int32F(Mesg s, byte f, int v = 0)
