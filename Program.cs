@@ -9,8 +9,6 @@ namespace FitParse
 	class Program
 	{
 		static Dictionary<ushort, int> mesgCounts = new Dictionary<ushort, int>();
-		static FileStream fitSource;
-		private static Database db = new Database();
 
 		private static List<ActivityMesg> activities = new List<ActivityMesg>();
 		private static List<SessionMesg> sessions = new List<SessionMesg>();
@@ -19,23 +17,56 @@ namespace FitParse
 
 		static void Main(string[] args)
 		{
+			if (args.Length < 1)
+			{
+				Console.WriteLine("Usage: fitparse.exe <filename or directory>");
+				return;
+			}
+
+			if (System.IO.File.Exists(args[0]))
+			{
+				ProcessFile(args[0]);
+			}
+			else if (Directory.Exists(args[0]))
+			{
+				ProcessDirectory(args[0]);
+			}
+			else
+			{
+				Console.WriteLine($"Could not find file or directory '{args[0]}'");
+				return;
+			}
+		}
+
+		private static void ProcessDirectory(string directory)
+		{
+			foreach (string file in Directory.EnumerateFiles(directory))
+			{
+				ProcessFile(file);
+			}
+
+			foreach (string subdir in Directory.EnumerateDirectories(directory))
+			{
+				ProcessDirectory(subdir);
+			}
+		}
+
+		private static void ProcessFile(string fileName)
+		{
+			mesgCounts.Clear();
+
 			Stopwatch stopwatch = new Stopwatch();
 			stopwatch.Start();
+			Database db = new Database();
 			db.Connect();
 
 			Console.WriteLine("FIT Decode Example Application");
 
-			if (args.Length != 1)
-			{
-				Console.WriteLine("Usage: decode.exe <filename>");
-				return;
-			}
-
 			try
 			{
 				// Attempt to open .FIT file
-				fitSource = new FileStream(args[0], FileMode.Open);
-				Console.WriteLine("Opening {0}", args[0]);
+				FileStream fitSource = new FileStream(fileName, FileMode.Open);
+				Console.WriteLine("Opening {0}", fileName);
 
 				Decode decodeDemo = new Decode();
 				MesgBroadcaster mesgBroadcaster = new MesgBroadcaster();
@@ -63,13 +94,13 @@ namespace FitParse
 				{
 					Console.WriteLine("Decoding...");
 					decodeDemo.Read(fitSource);
-					Console.WriteLine("Decoded FIT file {0}", args[0]);
+					Console.WriteLine("Decoded FIT file {0}", fileName);
 				}
 				else
 				{
 					try
 					{
-						Console.WriteLine("Integrity Check Failed {0}", args[0]);
+						Console.WriteLine("Integrity Check Failed {0}", fileName);
 						if (decodeDemo.InvalidDataSize)
 						{
 							Console.WriteLine("Invalid Size Detected, Attempting to decode...");
