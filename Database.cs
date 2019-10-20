@@ -50,14 +50,21 @@ namespace FitParse
 		{
 			foreach (ActivityMesg activity in activities)
 			{
+				int activityEnd = Convert.ToInt32(activity.GetFieldValue(ActivityMesg.FieldDefNum.Timestamp));
+				int activityDuration = Convert.ToInt32(activity.GetFieldValue(ActivityMesg.FieldDefNum.TotalTimerTime));
+				int activityStart = activityEnd - activityDuration;
+
+				// Check if the activity already exists. Don't upload it if it does.
+				if (this.ActivityExists(activityEnd, activityDuration))
+				{
+					Console.WriteLine("Activity already exists");
+					continue;
+				}
+
 				int activityId = this.AddActivity(activity);
 
 				// If upload failed skip the rest
 				if (activityId == -1) { continue; }
-
-				int activityEnd = Convert.ToInt32(activity.GetFieldValue(ActivityMesg.FieldDefNum.Timestamp));
-				int activityDuration = Convert.ToInt32(activity.GetFieldValue(ActivityMesg.FieldDefNum.TotalTimerTime));
-				int activityStart = activityEnd - activityDuration;
 
 				UploadSessions(sessions, laps, records, activityId, activityStart, activityEnd);
 			}
@@ -454,6 +461,34 @@ namespace FitParse
 					}
 				}
 				return -1;
+			}
+		}
+
+		private bool ActivityExists(int timestamp, int totalTimerTime)
+		{
+			string query =
+				"select count(ID) from Activity " +
+				"where Timestamp = @Timestamp and TotalTimerTime = @TotalTimerTime";
+
+			using (SqlCommand cmd = new SqlCommand(query, conn))
+			{
+				cmd.Parameters.AddWithValue("@Timestamp", Convert.ToInt64(timestamp));
+				cmd.Parameters.AddWithValue("@TotalTimerTime", Convert.ToInt64(totalTimerTime));
+
+				DataTable exists = new DataTable("Exists");
+				SqlDataAdapter dap = new SqlDataAdapter(cmd);
+
+				dap.Fill(exists);
+
+				foreach (DataRow row in exists.Rows)
+				{
+					foreach (object item in row.ItemArray)
+					{
+						return (Convert.ToInt32(item) > 0);
+					}
+				}
+
+				return false;
 			}
 		}
 
