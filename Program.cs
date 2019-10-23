@@ -8,6 +8,8 @@ namespace FitParse
 {
 	class Program
 	{
+		const bool PrintDebugOut = false;
+
 		static Dictionary<ushort, int> mesgCounts = new Dictionary<ushort, int>();
 
 		private static List<ActivityMesg> activities = new List<ActivityMesg>();
@@ -154,25 +156,34 @@ namespace FitParse
 
 		private static void OnDeveloperFieldDescriptionEvent(object sender, DeveloperFieldDescriptionEventArgs args)
 		{
-			Console.WriteLine("New Developer Field Description");
-			Console.WriteLine("   App Id: {0}", args.Description.ApplicationId);
-			Console.WriteLine("   App Version: {0}", args.Description.ApplicationVersion);
-			Console.WriteLine("   Field Number: {0}", args.Description.FieldDefinitionNumber);
+			if (PrintDebugOut)
+			{
+				Console.WriteLine("New Developer Field Description");
+				Console.WriteLine("   App Id: {0}", args.Description.ApplicationId);
+				Console.WriteLine("   App Version: {0}", args.Description.ApplicationVersion);
+				Console.WriteLine("   Field Number: {0}", args.Description.FieldDefinitionNumber);
+			}
 		}
 
 		// Client implements their handlers of interest and subscribes to MesgBroadcaster events
 		static void OnMesgDefn(object sender, MesgDefinitionEventArgs e)
 		{
-			Console.WriteLine("OnMesgDef: Received Defn for local message #{0}, global num {1}", e.mesgDef.LocalMesgNum, e.mesgDef.GlobalMesgNum);
-			Console.WriteLine("\tIt has {0} fields {1} developer fields and is {2} bytes long",
-				e.mesgDef.NumFields,
-				e.mesgDef.NumDevFields,
-				e.mesgDef.GetMesgSize());
+			if (PrintDebugOut)
+			{
+				Console.WriteLine("OnMesgDef: Received Defn for local message #{0}, global num {1}", e.mesgDef.LocalMesgNum, e.mesgDef.GlobalMesgNum);
+				Console.WriteLine("\tIt has {0} fields {1} developer fields and is {2} bytes long",
+					e.mesgDef.NumFields,
+					e.mesgDef.NumDevFields,
+					e.mesgDef.GetMesgSize());
+			}
 		}
 
 		static void OnMesg(object sender, MesgEventArgs e)
 		{
-			Console.WriteLine("OnMesg: Received Mesg with global ID#{0}, its name is {1}", e.mesg.Num, e.mesg.Name);
+			if (PrintDebugOut)
+			{
+				Console.WriteLine("OnMesg: Received Mesg with global ID#{0}, its name is {1}", e.mesg.Num, e.mesg.Name);
+			}
 
 			switch (e.mesg.Num)
 			{
@@ -196,34 +207,38 @@ namespace FitParse
 					break;
 			}
 
-			int i = 0;
-			foreach (Field field in e.mesg.Fields)
+
+			if (PrintDebugOut)
 			{
-				for (int j = 0; j < field.GetNumValues(); j++)
+				int i = 0;
+				foreach (Field field in e.mesg.Fields)
 				{
-					Console.WriteLine("\tField{0} Index{1} (\"{2}\" Field#{4}) Value: {3} (raw value {5})",
-						i,
-						j,
-						field.GetName(),
-						field.GetValue(j),
-						field.Num,
-						field.GetRawValue(j));
+					for (int j = 0; j < field.GetNumValues(); j++)
+					{
+						Console.WriteLine("\tField{0} Index{1} (\"{2}\" Field#{4}) Value: {3} (raw value {5})",
+							i,
+							j,
+							field.GetName(),
+							field.GetValue(j),
+							field.Num,
+							field.GetRawValue(j));
+					}
+
+					i++;
 				}
 
-				i++;
-			}
-
-			foreach (var devField in e.mesg.DeveloperFields)
-			{
-				for (int j = 0; j < devField.GetNumValues(); j++)
+				foreach (var devField in e.mesg.DeveloperFields)
 				{
-					Console.WriteLine("\tDeveloper{0} Field#{1} Index{2} (\"{3}\") Value: {4} (raw value {5})",
-						devField.DeveloperDataIndex,
-						devField.Num,
-						j,
-						devField.Name,
-						devField.GetValue(j),
-						devField.GetRawValue(j));
+					for (int j = 0; j < devField.GetNumValues(); j++)
+					{
+						Console.WriteLine("\tDeveloper{0} Field#{1} Index{2} (\"{3}\") Value: {4} (raw value {5})",
+							devField.DeveloperDataIndex,
+							devField.Num,
+							j,
+							devField.Name,
+							devField.GetValue(j),
+							devField.GetRawValue(j));
+					}
 				}
 			}
 
@@ -239,118 +254,133 @@ namespace FitParse
 
 		static void OnFileIDMesg(object sender, MesgEventArgs e)
 		{
-			Console.WriteLine("FileIdHandler: Received {1} Mesg with global ID#{0}", e.mesg.Num, e.mesg.Name);
-			FileIdMesg myFileId = (FileIdMesg)e.mesg;
-			try
+			if (PrintDebugOut)
 			{
-				Console.WriteLine("\tType: {0}", myFileId.GetType());
-				Console.WriteLine("\tManufacturer: {0}", myFileId.GetManufacturer());
-				Console.WriteLine("\tProduct: {0}", myFileId.GetProduct());
-				Console.WriteLine("\tSerialNumber {0}", myFileId.GetSerialNumber());
-				Console.WriteLine("\tNumber {0}", myFileId.GetNumber());
-				Console.WriteLine("\tTimeCreated {0}", myFileId.GetTimeCreated());
-
-				//Make sure properties with sub properties arent null before trying to create objects based on them
-				if (myFileId.GetTimeCreated() != null)
+				Console.WriteLine("FileIdHandler: Received {1} Mesg with global ID#{0}", e.mesg.Num, e.mesg.Name);
+				FileIdMesg myFileId = (FileIdMesg)e.mesg;
+				try
 				{
-					Dynastream.Fit.DateTime dtTime = new Dynastream.Fit.DateTime(myFileId.GetTimeCreated().GetTimeStamp());
+					Console.WriteLine("\tType: {0}", myFileId.GetType());
+					Console.WriteLine("\tManufacturer: {0}", myFileId.GetManufacturer());
+					Console.WriteLine("\tProduct: {0}", myFileId.GetProduct());
+					Console.WriteLine("\tSerialNumber {0}", myFileId.GetSerialNumber());
+					Console.WriteLine("\tNumber {0}", myFileId.GetNumber());
+					Console.WriteLine("\tTimeCreated {0}", myFileId.GetTimeCreated());
+
+					//Make sure properties with sub properties arent null before trying to create objects based on them
+					if (myFileId.GetTimeCreated() != null)
+					{
+						Dynastream.Fit.DateTime dtTime = new Dynastream.Fit.DateTime(myFileId.GetTimeCreated().GetTimeStamp());
+					}
 				}
-			}
-			catch (FitException exception)
-			{
-				Console.WriteLine("\tOnFileIDMesg Error {0}", exception.Message);
-				Console.WriteLine("\t{0}", exception.InnerException);
+				catch (FitException exception)
+				{
+					Console.WriteLine("\tOnFileIDMesg Error {0}", exception.Message);
+					Console.WriteLine("\t{0}", exception.InnerException);
+				}
 			}
 		}
 
 		static void OnUserProfileMesg(object sender, MesgEventArgs e)
 		{
-			Console.WriteLine("UserProfileHandler: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name);
-			UserProfileMesg myUserProfile = (UserProfileMesg)e.mesg;
-			string friendlyName;
-			try
+			if (PrintDebugOut)
 			{
+				Console.WriteLine("UserProfileHandler: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name);
+				UserProfileMesg myUserProfile = (UserProfileMesg)e.mesg;
+				string friendlyName;
 				try
 				{
-					friendlyName = myUserProfile.GetFriendlyNameAsString();
+					try
+					{
+						friendlyName = myUserProfile.GetFriendlyNameAsString();
+					}
+					catch (ArgumentNullException)
+					{
+						//There is no FriendlyName property
+						friendlyName = "";
+					}
+					Console.WriteLine("\tFriendlyName \"{0}\"", friendlyName);
+					Console.WriteLine("\tGender {0}", myUserProfile.GetGender().ToString());
+					Console.WriteLine("\tAge {0}", myUserProfile.GetAge());
+					Console.WriteLine("\tWeight  {0}", myUserProfile.GetWeight());
 				}
-				catch (ArgumentNullException)
+				catch (FitException exception)
 				{
-					//There is no FriendlyName property
-					friendlyName = "";
+					Console.WriteLine("\tOnUserProfileMesg Error {0}", exception.Message);
+					Console.WriteLine("\t{0}", exception.InnerException);
 				}
-				Console.WriteLine("\tFriendlyName \"{0}\"", friendlyName);
-				Console.WriteLine("\tGender {0}", myUserProfile.GetGender().ToString());
-				Console.WriteLine("\tAge {0}", myUserProfile.GetAge());
-				Console.WriteLine("\tWeight  {0}", myUserProfile.GetWeight());
-			}
-			catch (FitException exception)
-			{
-				Console.WriteLine("\tOnUserProfileMesg Error {0}", exception.Message);
-				Console.WriteLine("\t{0}", exception.InnerException);
 			}
 		}
 
 		static void OnDeviceInfoMessage(object sender, MesgEventArgs e)
 		{
-			Console.WriteLine("DeviceInfoHandler: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name);
-			DeviceInfoMesg myDeviceInfoMessage = (DeviceInfoMesg)e.mesg;
-			try
+			if (PrintDebugOut)
 			{
-				Console.WriteLine("\tTimestamp  {0}", myDeviceInfoMessage.GetTimestamp());
-				Console.WriteLine("\tBattery Status{0}", myDeviceInfoMessage.GetBatteryStatus());
-			}
-			catch (FitException exception)
-			{
-				Console.WriteLine("\tOnDeviceInfoMesg Error {0}", exception.Message);
-				Console.WriteLine("\t{0}", exception.InnerException);
+				Console.WriteLine("DeviceInfoHandler: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name);
+				DeviceInfoMesg myDeviceInfoMessage = (DeviceInfoMesg)e.mesg;
+				try
+				{
+					Console.WriteLine("\tTimestamp  {0}", myDeviceInfoMessage.GetTimestamp());
+					Console.WriteLine("\tBattery Status{0}", myDeviceInfoMessage.GetBatteryStatus());
+				}
+				catch (FitException exception)
+				{
+					Console.WriteLine("\tOnDeviceInfoMesg Error {0}", exception.Message);
+					Console.WriteLine("\t{0}", exception.InnerException);
+				}
 			}
 		}
 
 		static void OnMonitoringMessage(object sender, MesgEventArgs e)
 		{
-			Console.WriteLine("MonitoringHandler: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name);
-			MonitoringMesg myMonitoringMessage = (MonitoringMesg)e.mesg;
-			try
+			if (PrintDebugOut)
 			{
-				Console.WriteLine("\tTimestamp  {0}", myMonitoringMessage.GetTimestamp());
-				Console.WriteLine("\tActivityType {0}", myMonitoringMessage.GetActivityType());
-				switch (myMonitoringMessage.GetActivityType()) // Cycles is a dynamic field
+				Console.WriteLine("MonitoringHandler: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name);
+				MonitoringMesg myMonitoringMessage = (MonitoringMesg)e.mesg;
+				try
 				{
-					case ActivityType.Walking:
-					case ActivityType.Running:
-						Console.WriteLine("\tSteps {0}", myMonitoringMessage.GetSteps());
-						break;
-					case ActivityType.Cycling:
-					case ActivityType.Swimming:
-						Console.WriteLine("\tStrokes {0}", myMonitoringMessage.GetStrokes());
-						break;
-					default:
-						Console.WriteLine("\tCycles {0}", myMonitoringMessage.GetCycles());
-						break;
+					Console.WriteLine("\tTimestamp  {0}", myMonitoringMessage.GetTimestamp());
+					Console.WriteLine("\tActivityType {0}", myMonitoringMessage.GetActivityType());
+					switch (myMonitoringMessage.GetActivityType()) // Cycles is a dynamic field
+					{
+						case ActivityType.Walking:
+						case ActivityType.Running:
+							Console.WriteLine("\tSteps {0}", myMonitoringMessage.GetSteps());
+							break;
+						case ActivityType.Cycling:
+						case ActivityType.Swimming:
+							Console.WriteLine("\tStrokes {0}", myMonitoringMessage.GetStrokes());
+							break;
+						default:
+							Console.WriteLine("\tCycles {0}", myMonitoringMessage.GetCycles());
+							break;
+					}
 				}
-			}
-			catch (FitException exception)
-			{
-				Console.WriteLine("\tOnDeviceInfoMesg Error {0}", exception.Message);
-				Console.WriteLine("\t{0}", exception.InnerException);
+				catch (FitException exception)
+				{
+					Console.WriteLine("\tOnDeviceInfoMesg Error {0}", exception.Message);
+					Console.WriteLine("\t{0}", exception.InnerException);
+				}
 			}
 		}
 
 		private static void OnRecordMessage(object sender, MesgEventArgs e)
 		{
-			Console.WriteLine("Record Handler: Received {0} Mesg, it has global ID#{1}",
-				e.mesg.Num,
-				e.mesg.Name);
+			if (PrintDebugOut)
+			{
+				Console.WriteLine("Record Handler: Received {0} Mesg, it has global ID#{1}",
+					e.mesg.Num,
+					e.mesg.Name);
 
-			var recordMessage = (RecordMesg)e.mesg;
+				var recordMessage = (RecordMesg)e.mesg;
 
-			WriteFieldWithOverrides(recordMessage, RecordMesg.FieldDefNum.HeartRate);
-			WriteFieldWithOverrides(recordMessage, RecordMesg.FieldDefNum.Cadence);
-			WriteFieldWithOverrides(recordMessage, RecordMesg.FieldDefNum.Speed);
-			WriteFieldWithOverrides(recordMessage, RecordMesg.FieldDefNum.Distance);
+				WriteFieldWithOverrides(recordMessage, RecordMesg.FieldDefNum.HeartRate);
+				WriteFieldWithOverrides(recordMessage, RecordMesg.FieldDefNum.Cadence);
+				WriteFieldWithOverrides(recordMessage, RecordMesg.FieldDefNum.Speed);
+				WriteFieldWithOverrides(recordMessage, RecordMesg.FieldDefNum.Distance);
 
-			WriteDeveloperFields(recordMessage);
+				WriteDeveloperFields(recordMessage);
+			}
 		}
 
 		private static void WriteDeveloperFields(Mesg mesg)
