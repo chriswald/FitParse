@@ -54,6 +54,19 @@ namespace FitParse
 
 		public void UploadRide(List<ActivityMesg> activities, List<SessionMesg> sessions, List<LapMesg> laps, List<RecordMesg> records)
 		{
+			if (sessions.Count == 0)
+			{
+				SessionMesg mesg = BuildSessionFromLaps(laps);
+				sessions.Add(mesg);
+			}
+
+			if (activities.Count == 0)
+			{
+				ActivityMesg mesg = BuildActivityFromSessions(sessions);
+				activities.Add(mesg);
+			}
+
+
 			foreach (ActivityMesg activity in activities)
 			{
 				int activityEnd = Convert.ToInt32(activity.GetFieldValue(ActivityMesg.FieldDefNum.Timestamp));
@@ -506,6 +519,84 @@ namespace FitParse
 			}
 		}
 
+		private ActivityMesg BuildActivityFromSessions(List<SessionMesg> sessions)
+		{
+			ActivityMesg mesg = new ActivityMesg();
+
+			Int64 latestTimestamp = 0;
+			SessionMesg lastSession = null;
+			foreach (SessionMesg session in sessions)
+			{
+				if (lastSession == null)
+				{
+					lastSession = session;
+					latestTimestamp = Int64F(session, SessionMesg.FieldDefNum.Timestamp) ?? 0;
+				}
+				else
+				{
+					Int64 thisTimestamp = Int64F(session, SessionMesg.FieldDefNum.Timestamp) ?? 0;
+					if (thisTimestamp > latestTimestamp)
+					{
+						lastSession = session;
+						latestTimestamp = thisTimestamp;
+					}
+				}
+			}
+
+			Int64 activityTimestamp = latestTimestamp + (Int64F(lastSession, SessionMesg.FieldDefNum.TotalTimerTime) ?? 0);
+
+			SetValue(mesg, ActivityMesg.FieldDefNum.Timestamp, 0, activityTimestamp);
+			SetValue(mesg, ActivityMesg.FieldDefNum.NumSessions, 0, sessions.Count);
+			SetValue(mesg, ActivityMesg.FieldDefNum.Type, 0, 0);
+			SetValue(mesg, ActivityMesg.FieldDefNum.TotalTimerTime, 0, SumInt64(sessions, SessionMesg.FieldDefNum.TotalTimerTime));
+
+			return mesg;
+		}
+
+		private SessionMesg BuildSessionFromLaps(List<LapMesg> laps)
+		{
+			SessionMesg mesg = new SessionMesg();
+
+			SetValue(mesg, SessionMesg.FieldDefNum.Timestamp, 0, MinValueInt64(laps, LapMesg.FieldDefNum.Timestamp));
+			SetValue(mesg, SessionMesg.FieldDefNum.StartTime, 0, MinValueInt64(laps, LapMesg.FieldDefNum.StartTime));
+			SetValue(mesg, SessionMesg.FieldDefNum.TotalElapsedTime, 0, SumInt64(laps, LapMesg.FieldDefNum.TotalElapsedTime));
+			SetValue(mesg, SessionMesg.FieldDefNum.TotalTimerTime, 0, SumInt64(laps, LapMesg.FieldDefNum.TotalTimerTime));
+			//SetValue(mesg, SessionMesg.FieldDefNum.AvgSpeed, 0, SumInt64(laps, LapMesg.FieldDefNum.AvgSpeed));
+			SetValue(mesg, SessionMesg.FieldDefNum.MaxSpeed, 0, MaxValueInt32(laps, LapMesg.FieldDefNum.MaxSpeed));
+			SetValue(mesg, SessionMesg.FieldDefNum.TotalDistance, 0, SumInt64(laps, LapMesg.FieldDefNum.TotalDistance));
+			//SetValue(mesg, SessionMesg.FieldDefNum.AvgCadence, 0, SumInt32(laps, LapMesg.FieldDefNum.AvgCadence));
+			SetValue(mesg, SessionMesg.FieldDefNum.MaxCadence, 0, MaxValueInt32(laps, LapMesg.FieldDefNum.MaxCadence));
+			//SetValue(mesg, SessionMesg.FieldDefNum.AvgPower, 0, SumInt32(laps, LapMesg.FieldDefNum.AvgPower));
+			SetValue(mesg, SessionMesg.FieldDefNum.MaxPower, 0, MaxValueInt32(laps, LapMesg.FieldDefNum.MaxPower));
+			//SetValue(mesg, SessionMesg.FieldDefNum.LeftRightBalance, 0, SumInt32(laps, LapMesg.FieldDefNum.LeftRightBalance));
+			SetValue(mesg, SessionMesg.FieldDefNum.TimeInPowerZone, 0, SumInt64(laps, LapMesg.FieldDefNum.TimeInPowerZone, 0));
+			SetValue(mesg, SessionMesg.FieldDefNum.TimeInPowerZone, 1, SumInt64(laps, LapMesg.FieldDefNum.TimeInPowerZone, 1));
+			SetValue(mesg, SessionMesg.FieldDefNum.TimeInPowerZone, 2, SumInt64(laps, LapMesg.FieldDefNum.TimeInPowerZone, 2));
+			SetValue(mesg, SessionMesg.FieldDefNum.TimeInPowerZone, 3, SumInt64(laps, LapMesg.FieldDefNum.TimeInPowerZone, 3));
+			SetValue(mesg, SessionMesg.FieldDefNum.TimeInPowerZone, 4, SumInt64(laps, LapMesg.FieldDefNum.TimeInPowerZone, 4));
+			SetValue(mesg, SessionMesg.FieldDefNum.TimeInPowerZone, 5, SumInt64(laps, LapMesg.FieldDefNum.TimeInPowerZone, 5));
+			SetValue(mesg, SessionMesg.FieldDefNum.TimeInPowerZone, 6, SumInt64(laps, LapMesg.FieldDefNum.TimeInPowerZone, 6));
+			SetValue(mesg, SessionMesg.FieldDefNum.TotalWork, 0, SumInt64(laps, LapMesg.FieldDefNum.TotalWork));
+			SetValue(mesg, SessionMesg.FieldDefNum.MinAltitude, 0, MinValueInt64(laps, LapMesg.FieldDefNum.MinAltitude));
+			//SetValue(mesg, SessionMesg.FieldDefNum.AvgAltitude, 0, MinValueInt64(laps, LapMesg.FieldDefNum.AvgAltitude));
+			SetValue(mesg, SessionMesg.FieldDefNum.MaxAltitude, 0, MaxValueInt64(laps, LapMesg.FieldDefNum.MaxAltitude));
+			SetValue(mesg, SessionMesg.FieldDefNum.MaxNegGrade, 0, MinValueInt32(laps, LapMesg.FieldDefNum.MaxNegGrade));
+			//SetValue(mesg, SessionMesg.FieldDefNum.AvgGrade, 0, MaxValueInt32(laps, LapMesg.FieldDefNum.AvgGrade));
+			SetValue(mesg, SessionMesg.FieldDefNum.MaxPosGrade, 0, MaxValueInt32(laps, LapMesg.FieldDefNum.MaxPosGrade));
+			//SetValue(mesg, SessionMesg.FieldDefNum.NormalizedPower, 0, SumInt32(laps, LapMesg.FieldDefNum.NormalizedPower));
+			//SetValue(mesg, SessionMesg.FieldDefNum.AvgTemperature, 0, SumInt32(laps, LapMesg.FieldDefNum.AvgTemperature));
+			SetValue(mesg, SessionMesg.FieldDefNum.MaxTemperature, 0, MaxValueInt32(laps, LapMesg.FieldDefNum.MaxTemperature));
+			SetValue(mesg, SessionMesg.FieldDefNum.TotalAscent, 0, SumInt64(laps, LapMesg.FieldDefNum.TotalAscent));
+			SetValue(mesg, SessionMesg.FieldDefNum.TotalDescent, 0, SumInt64(laps, LapMesg.FieldDefNum.TotalDescent));
+			SetValue(mesg, SessionMesg.FieldDefNum.Sport, 0, MaxValueInt32(laps, LapMesg.FieldDefNum.Sport));
+			SetValue(mesg, SessionMesg.FieldDefNum.NumLaps, 0, laps.Count);
+			SetValue(mesg, SessionMesg.FieldDefNum.EnhancedMinAltitude, 0, MinValueInt64(laps, LapMesg.FieldDefNum.EnhancedMinAltitude));
+			//SetValue(mesg, SessionMesg.FieldDefNum.EnhancedAvgAltitude, 0, MinValueInt64(laps, LapMesg.FieldDefNum.EnhancedAvgAltitude));
+			SetValue(mesg, SessionMesg.FieldDefNum.EnhancedMaxAltitude, 0, MinValueInt64(laps, LapMesg.FieldDefNum.EnhancedMaxAltitude));
+
+			return mesg;
+		}
+
 		private Int32? Int32F(Mesg s, byte f, int v = 0)
 		{
 			try
@@ -553,6 +644,100 @@ namespace FitParse
 
 			object value = field.GetRawValue(v);
 			return value;
+		}
+
+		private void SetValue(Mesg s, byte f, int v, long value)
+		{
+			s.SetFieldValue(f, v, value);
+		}
+
+		private void SetValue(Mesg s, byte f, int v, int value)
+		{
+			s.SetFieldValue(f, v, value);
+		}
+
+		private Int32 MinValueInt32<T>(List<T> ss, byte f, int v = 0) where T : Mesg
+		{
+			Int32 minVal = Int32F(ss[0], f, v) ?? 0;
+			foreach (T s in ss)
+			{
+				Int32 val = Int32F(s, f, v) ?? minVal;
+				if (val < minVal)
+				{
+					minVal = val;
+				}
+			}
+
+			return minVal;
+		}
+
+		private Int32 MaxValueInt32<T>(List<T> ss, byte f, int v = 0) where T : Mesg
+		{
+			Int32 maxVal = Int32F(ss[0], f, v) ?? 0;
+			foreach (T s in ss)
+			{
+				Int32 val = Int32F(s, f, v) ?? maxVal;
+				if (val > maxVal)
+				{
+					maxVal = val;
+				}
+			}
+
+			return maxVal;
+		}
+
+		private Int32 SumInt32<T>(List<T> ss, byte f, int v = 0) where T : Mesg
+		{
+			Int32 sum = 0;
+			foreach (T s in ss)
+			{
+				Int32 val = Int32F(s, f, v) ?? 0;
+				sum += val;
+			}
+
+			return sum;
+		}
+
+		private Int64 MinValueInt64<T>(List<T> ss, byte f, int v = 0) where T : Mesg
+		{
+			Int64 minVal = Int64F(ss[0], f, v) ?? 0;
+			foreach (T s in ss)
+			{
+				Int64 val = Int64F(s, f, v) ?? minVal;
+				if (val < minVal)
+				{
+					minVal = val;
+				}
+			}
+
+			return minVal;
+		}
+
+		private Int64 MaxValueInt64<T>(List<T> ss, byte f, int v = 0) where T : Mesg
+		{
+			Int64 maxVal = Int64F(ss[0], f, v) ?? 0;
+			foreach (T s in ss)
+			{
+				Int64 val = Int64F(s, f, v) ?? maxVal;
+				if (val > maxVal)
+				{
+					maxVal = val;
+				}
+			}
+
+			return maxVal;
+		}
+
+		private Int64 SumInt64<T>(List<T> ss, byte f, int v = 0) where T : Mesg
+		{
+			Int64 sum = 0;
+			foreach (T s in ss)
+			{
+				Int64 val = Int32F(s, f, v) ?? 0;
+				sum += val;
+			}
+
+			return sum;
 		}
 	}
 }
