@@ -648,12 +648,32 @@ namespace FitParse
 
 		private void SetValue(Mesg s, byte f, int v, long value)
 		{
-			s.SetFieldValue(f, v, value);
+			try
+			{
+				Field field = s.GetField(f);
+				field.SetRawValue(v, value);
+			}
+			catch (Exception e)
+			{
+				s.SetFieldValue(f, v, value);
+				Field field = s.GetField(f);
+				field.SetRawValue(v, value);
+			}
 		}
 
 		private void SetValue(Mesg s, byte f, int v, int value)
 		{
-			s.SetFieldValue(f, v, value);
+			try
+			{
+				Field field = s.GetField(f);
+				field.SetRawValue(v, value);
+			}
+			catch (Exception e)
+			{
+				s.SetFieldValue(f, v, value);
+				Field field = s.GetField(f);
+				field.SetRawValue(v, value);
+			}
 		}
 
 		private Int32 MinValueInt32<T>(List<T> ss, byte f, int v = 0) where T : Mesg
